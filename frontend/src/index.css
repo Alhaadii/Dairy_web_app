@@ -1,0 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Yellowtail&display=swap");
+
+:root {
+  --primary: #937dc2;
+  --secondary: #ac9ba6;
+  --danger: #fa76cc;
+}
+body {
+  color: var(--primary) !important;
+  background-color: #f5f5f5 !important;
+}
+.primary {
+  background-color: var(--primary) !important;
+}
+.secondary {
+  color: var(--secondary) !important;
+}
+.danger {
+  color: var(--danger) !important;
+}
+.title {
+  font-family: "Yellowtail", serif !important;
+  font-weight: 400;
+  font-style: normal;
+}
+
+#root {
+  color: var(--primary) !important;
+}
