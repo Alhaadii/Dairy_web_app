@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { events } from "../utils/Data";
 import moment from "moment";
 import { Link } from "react-router-dom";
 import Avatar from "react-avatar";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import ReactMarkDown from "react-markdown";
+import axios from "axios";
+import { getFromLocalStorage } from "../utils/LocalStorage";
 
 const Details = () => {
   const param = useParams();
@@ -13,23 +14,64 @@ const Details = () => {
   const [diary, setDiary] = useState([]);
   const [error, setError] = useState("");
 
-  const handleDelete = (id) => {
-    const confirm = window.confirm("Are you sure you want to delete?");
-    if (confirm) {
-      console.log(id);
+  useEffect(() => {
+    if (!getFromLocalStorage("userInfo")) {
+      navigate("/login");
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     if (param.id) {
-      const event = events?.find((obj) => obj._id === param.id);
-      if (!event) {
-        return navigate("/");
-      }
-      setDiary(event);
+      getDiaryApi({ _id: param.id });
     }
   }, [param.id]);
 
+  const getDiaryApi = async ({ _id }) => {
+    const userInfo = getFromLocalStorage("userInfo");
+    if (!userInfo || !userInfo?.token) {
+      console.error("User token is missing or undefined");
+    } else {
+      // console.log(userInfo.token);
+    }
+    try {
+      const { data } = await axios.get(
+        `http://localhost:5000/api/diary/${_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${getFromLocalStorage("userInfo")?.token}`,
+          },
+        }
+      );
+      setDiary(data?.diary);
+
+      setFormStatus("edit");
+    } catch (error) {
+      setError(error?.response?.data?.error);
+      setTimeout(() => {
+        setError("");
+      }, 5000);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const confirm = window.confirm("Are you sure you want to delete?");
+      if (confirm) {
+        await axios.delete(`http://localhost:5000/api/diary/${id}`, {
+          headers: {
+            Authorization: `Bearer ${getFromLocalStorage("userInfo")?.token}`,
+          },
+        });
+        return navigate("/");
+        ``;
+      }
+    } catch (error) {
+      setError(error?.response?.data?.error);
+      setTimeout(() => {
+        setError("");
+      }, 5000);
+    }
+  };
   return (
     <div className="collg8 col-md-10 col-12 mx-auto">
       {error && (

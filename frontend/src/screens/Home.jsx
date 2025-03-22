@@ -1,24 +1,80 @@
-import React, { useState } from "react";
-import { events } from "../utils/Data";
+import React, { useEffect, useState } from "react";
 import moment from "moment";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Avatar from "react-avatar";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import ReactMarkDown from "react-markdown";
+import axios from "axios";
+import { getFromLocalStorage } from "../utils/LocalStorage";
 
 const Home = () => {
+  const navigate = useNavigate();
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
-  const filterDiaries = events?.filter((Obj) =>
-    Obj?.title?.toLowerCase().includes(q.toLowerCase())
-  );
+  const [events, setEvents] = useState([]);
 
-  const handleDelete = (id) => {
-    const confirm = window.confirm("Are you sure you want to delete?");
-    if (confirm) {
-      console.log(id);
+  useEffect(() => {
+    if (!getFromLocalStorage("userInfo")) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  const getDiariesApi = async () => {
+    try {
+      const userInfo = getFromLocalStorage("userInfo");
+      if (!userInfo || !userInfo.token) {
+        throw new Error("User is not authenticated");
+      }
+
+      const { data } = await axios.get("http://localhost:5000/api/diary", {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      });
+
+      if (Array.isArray(data.diaries)) {
+        setEvents(data.diaries);
+      } else {
+        console.error("Expected an array but got:", data);
+        setEvents([]);
+      }
+    } catch (error) {
+      setError(
+        error?.response?.data?.error ||
+          error.message ||
+          "Failed to fetch diaries"
+      );
+      setTimeout(() => setError(""), 5000);
     }
   };
+
+  const handleDelete = async (id) => {
+    try {
+      const confirm = window.confirm("Are you sure you want to delete?");
+      if (confirm) {
+        await axios.delete(`http://localhost:5000/api/diary/${id}`, {
+          headers: {
+            Authorization: `Bearer ${getFromLocalStorage("userInfo")?.token}`,
+          },
+        });
+        return getDiariesApi();
+        ``;
+      }
+    } catch (error) {
+      setError(error?.response?.data?.error);
+      setTimeout(() => {
+        setError("");
+      }, 5000);
+    }
+  };
+
+  const filterDiaries = events.filter((diary) => {
+    return diary?.title?.toLowerCase().includes(q.toLowerCase());
+  });
+
+  useEffect(() => {
+    getDiariesApi();
+  }, []);
 
   return (
     <div className="row gy-3">

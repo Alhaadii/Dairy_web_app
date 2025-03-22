@@ -69,10 +69,9 @@ export const deleteDiary = async (req, res) => {
     if (!diary) {
       return res.status(404).json({ message: "Diary not found" });
     }
-    await diary.remove();
+    await diary.deleteOne();
     return res.status(200).json({ message: "Diary removed" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
-

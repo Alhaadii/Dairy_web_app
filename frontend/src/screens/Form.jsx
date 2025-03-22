@@ -1,32 +1,105 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import FormContainer from "../components/FormContainer";
-import moment from "moment";
-import { events } from "../utils/Data";
+import { getFromLocalStorage } from "../utils/LocalStorage";
+import axios from "axios";
 
 const Form = () => {
   const param = useParams();
   const navigate = useNavigate();
-
   const [error, setError] = useState(null);
   const [id, setId] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const [formStatus, setFormStatus] = useState("");
+  const [formStatus, setFormStatus] = useState("add");
+
+  useEffect(() => {
+    if (!getFromLocalStorage("userInfo")) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  const createDiaryApi = async ({ title, description, eventDate }) => {
+    try {
+      await axios.post(
+        "http://localhost:5000/api/diary",
+        {
+          title,
+          description,
+          eventDate,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${getFromLocalStorage("userInfo")?.token}`,
+          },
+        }
+      );
+      return navigate("/");
+    } catch (error) {
+      setError(error?.response?.data?.error);
+      setTimeout(() => {
+        setError("");
+      }, 5000);
+    }
+  };
+
+  const updateDiaryApi = async ({ _id, title, description, eventDate }) => {
+    try {
+      await axios.put(
+        `http://localhost:5000/api/diary/${_id}`,
+        {
+          title,
+          description,
+          eventDate,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${getFromLocalStorage("userInfo")?.token}`,
+          },
+        }
+      );
+      return navigate("/");
+    } catch (error) {
+      setError(error?.response?.data?.error);
+      setTimeout(() => {
+        setError("");
+      }, 5000);
+    }
+  };
+
+  const getDiaryApi = async ({ _id }) => {
+    const userInfo = getFromLocalStorage("userInfo");
+    if (!userInfo || !userInfo?.token) {
+      console.error("User token is missing or undefined");
+    } else {
+      // console.log(userInfo.token);
+    }
+    try {
+      const { data } = await axios.get(
+        `http://localhost:5000/api/diary/${_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${getFromLocalStorage("userInfo")?.token}`,
+          },
+        }
+      );
+      setTitle(data?.diary?.title);
+      setDescription(data?.diary?.description);
+      setEventDate(data?.diary?.eventDate);
+      setId(data?.diary?._id);
+      setFormStatus("edit");
+    } catch (error) {
+      setError(error?.response?.data?.error);
+      setTimeout(() => {
+        setError("");
+      }, 5000);
+    }
+  };
 
   useEffect(() => {
     if (param.id) {
-      setFormStatus("edit");
-      const currentDiary = events.find((event) => event._id === param.id);
-      if (currentDiary) {
-        setId(currentDiary?._id);
-        setTitle(currentDiary?.title);
-        setDescription(currentDiary?.description);
-        setEventDate(
-          moment(currentDiary?.eventDate).format("YYYY-MM-DDTHH:mm")
-        );
-      }
+      getDiaryApi({ _id: param.id });
     } else {
       setFormStatus("add");
       setId("");
@@ -40,14 +113,13 @@ const Form = () => {
     e.preventDefault();
     if (formStatus === "add") {
       // Add form submission logic
-    } else {
+      return createDiaryApi({ title, description, eventDate });
+    }
+    if (formStatus === "edit") {
       // Edit form submission logic
+      return updateDiaryApi({ _id: id, title, description, eventDate });
     }
   };
-
-  
-
-
 
   return (
     <FormContainer>
